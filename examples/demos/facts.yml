@@ -7,7 +7,7 @@
 
 # => Find and start all active Cohesity Protection Jobs registered to a Cluster
 ---
-  - hosts: workstation
+  - hosts: local
     # => Please change these variables to connect
     # => to your Cohesity Cluster
     vars:
