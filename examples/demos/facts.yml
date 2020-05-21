@@ -1,64 +1,34 @@
-# => Workstation Declaration which will also be included in our
-# => Backup
-[workstation]
-control ansible_connection=local ansible_host=172.28.2.180 type=Linux
+# => Cohesity Facts saved to JSON file
+# =>
+# => Role: cohesity.cohesity_ansible_role
+# => Version: 0.6.0
+# => Date: 2018-12-28
+# =>
 
-[centos]
-centos6 ansible_host=10.2.x.x
-centos7 ansible_host=10.2.x.x
+# => Find and start all active Cohesity Protection Jobs registered to a Cluster
+---
+  - hosts: local
+    # => Please change these variables to connect
+    # => to your Cohesity Cluster
+    vars:
+        var_cohesity_server: cohesity.gtisf.local
+        var_cohesity_admin: cohesity
+        var_cohesity_password: Cohe$1ty
+        var_validate_certs: False
+    gather_facts: no
+    roles:
+      - cohesity.cohesity_ansible_role
+    tasks:
+        # => Gather Cohesity Facts
+        - name: Gather Cohesity Cluster Details
+          cohesity_facts:
+              cluster: "{{ var_cohesity_server }}"
+              username: "{{ var_cohesity_admin }}"
+              password: "{{ var_cohesity_password }}"
+              validate_certs: "{{ var_validate_certs }}"
+              state: complete
+              include_deleted: False
+          register: cohesity
 
-# => Default variables for all CentOS environments
-[centos:vars]
-type=Linux
-ansible_user=root
-ansible_become=False
-
-# => Grouping of all Linux hosts
-[linux:children]
-centos
-workstation
-
-# Physical Windows Servers
-[windows]
-windows12 ansible_host=10.2.x.x
-windows16 ansible_host=10.2.x.x
-
-# => Windows Variables to leverage for each Windows Server.
-[windows:vars]
-type=Windows
-install_type=volcbt
-reboot_after_install=True
-ansible_user=administrator
-ansible_password=password
-ansible_port=5986
-ansible_connection=winrm
-ansible_winrm_server_cert_validation=ignore
-
-# => Group all Physical Servers.  This grouping is used by the Demos and Complete
-# => Examples to identify Physical Servers
-[physical:children]
-linux
-windows
-
-# => Declare the VMware environments to manage.
-[vmware]
-vcenter01 ansible_host=10.2.x.x
-
-[vmware:vars]
-type=VMware
-vmware_type=VCenter
-source_username=administrator
-source_password=password
-
-# => Declare the GenericNas endpoints to manage
-[generic_nas]
-export_path endpoint="10.2.x.x:/export_path" nas_protocol=NFS
-nas_share endpoint="\\\\10.2.x.x\\nas_share"
-data endpoint="\\\\10.2.x.x\\data"
-
-# => Default variables for GenericNas endpoints.
-[generic_nas:vars]
-type=GenericNas
-nas_protocol=SMB
-nas_username=.\cohesity
-nas_password=password
+        - name: "Write the Collected Facts to {{ inventory_dir }}/cohesity_facts.json"
+          local_action: copy content="{{ cohesity | to_nice_json }}" dest="{{ inventory_dir }}/cohesity_facts.json"
